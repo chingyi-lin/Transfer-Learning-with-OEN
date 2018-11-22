@@ -325,8 +325,14 @@ def run_experiments(agent_types, games):
         
         
 if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('game', type=str)
+    args = parser.parse_args()
     agent_types = ['image', 'objects', 'features']
-    games = ['aliens', 'boulderdash', 'missilecommand', 'survivezombies', 'zelda']
+    # games = ['aliens', 'boulderdash', 'missilecommand', 'survivezombies', 'zelda', 'pacman']
+
+    # run_experiments(agent_types, games)
     
-    run_experiments(agent_types, games)
+    run_experiments(agent_types, [args.game])
 
