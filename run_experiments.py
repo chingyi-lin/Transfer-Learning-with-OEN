@@ -10,6 +10,7 @@ import numpy as np
 import tensorflow as tf
 
 import DQNAgent
+from ModelBasedAgent import ModelBasedAgent
 
 #TODO: Split this into a separate agent initiation of agent and env and training
 def run_agent(args):
@@ -85,6 +86,12 @@ def run_agent(args):
         args.preprocessor = 'default'
         args.obs_size = list(env.observation_space.shape)
         args.history_len = 0
+    elif mode=='modelbased':
+        args.model = 'modelbased'
+        args.preprocessor = 'default'
+        args.obs_size = list(env.observation_space.shape)
+        # TODO: decide history_len
+        args.history_len = 0
     elif mode=='vanilla':
         args.model = 'fully connected'
         args.preprocessor = 'default'
@@ -103,7 +110,10 @@ def run_agent(args):
     print("Building agent for env shape " + str(args.obs_size))
 
     # Create agent
-    agent = DQNAgent.DQNAgent(sess, args)
+    if mode == 'modelbased':
+        agent = ModelBasedAgent(sess, args, env)
+    else:
+        agent = DQNAgent.DQNAgent(sess, args)
 
     # Initialize all tensorflow variables
     sess.run(tf.global_variables_initializer())
@@ -115,86 +125,89 @@ def run_agent(args):
     rewards = []
     terminal = False
 
-    # Train until we reach max iterations
-    for step in trange(training_iters, ncols=80):
+    if mode == 'modelbased':
+        agent.MBRLTraining()
+    else:
+        # Train until we reach max iterations
+        for step in trange(training_iters, ncols=80):
 
-        # Act, and add
-        action, value = agent.GetAction()
-        state, reward, terminal, info = env.step(action)
-        agent.Update(action, reward, state, terminal)
+            # Act, and add
+            action, value = agent.GetAction()
+            state, reward, terminal, info = env.step(action)
+            agent.Update(action, reward, state, terminal)
 
-        if args.render:
-            env.render()
+            if args.render:
+                env.render()
 
-        # Bookeeping
-        rewards.append(reward)
-        qs.append(value)
-
-        if terminal:
             # Bookeeping
-            ep_rewards.append(np.sum(rewards))
-            rewards = []
+            rewards.append(reward)
+            qs.append(value)
 
-            # Run tests
-            if step >= (tests_done)*test_step:
-                tests_done += 1
-                R_s = run_tests(agent, env, test_count, args.render)
+            if terminal:
+                # Bookeeping
+                ep_rewards.append(np.sum(rewards))
+                rewards = []
 
-                test_results.append({ 'step': step,
-                          'scores': R_s,
-                          'average': np.mean(R_s),
-                          'max': np.max(R_s) })
-                summary = { 'params': vars(args), 'tests': test_results }
+                # Run tests
+                if step >= (tests_done)*test_step:
+                    tests_done += 1
+                    R_s = run_tests(agent, env, test_count, args.render)
 
-                if args.save_file is not None:
-                    np.save(args.save_file, summary)
+                    test_results.append({ 'step': step,
+                            'scores': R_s,
+                            'average': np.mean(R_s),
+                            'max': np.max(R_s) })
+                    summary = { 'params': vars(args), 'tests': test_results }
 
-                if args.chk_file is not None:
-                    agent.Save(args.chk_file)
+                    if args.save_file is not None:
+                        np.save(args.save_file, summary)
 
-            # Reset agent and environment
-            state = env.reset()
-            agent.Reset(state)
+                    if args.chk_file is not None:
+                        agent.Save(args.chk_file)
+
+                # Reset agent and environment
+                state = env.reset()
+                agent.Reset(state)
 
 
-        # Display Statistics
-        if (step) % display_step == 0:
-            num_eps = len(ep_rewards[ep_reward_last:])
-            if num_eps is not 0:
-                avr_ep_reward = np.mean(ep_rewards[ep_reward_last:])
-                max_ep_reward = np.max(ep_rewards[ep_reward_last:])
-                avr_q = np.mean(qs[q_last:]) ; q_last = len(qs)
-                ep_reward_last = len(ep_rewards)
-            tqdm.write("{}, {:>7}/{}it | "\
-                .format(time.strftime("%H:%M:%S"), step, training_iters)
-                +"{:3n} episodes, q: {:4.3f}, avr_ep_r: {:4.1f}, "\
-                .format(num_eps, avr_q, avr_ep_reward)
-                +"max_ep_r: {:4.1f}, epsilon: {:4.3f}"\
-                .format(max_ep_reward, agent.epsilon))
+            # Display Statistics
+            if (step) % display_step == 0:
+                num_eps = len(ep_rewards[ep_reward_last:])
+                if num_eps is not 0:
+                    avr_ep_reward = np.mean(ep_rewards[ep_reward_last:])
+                    max_ep_reward = np.max(ep_rewards[ep_reward_last:])
+                    avr_q = np.mean(qs[q_last:]) ; q_last = len(qs)
+                    ep_reward_last = len(ep_rewards)
+                tqdm.write("{}, {:>7}/{}it | "\
+                    .format(time.strftime("%H:%M:%S"), step, training_iters)
+                    +"{:3n} episodes, q: {:4.3f}, avr_ep_r: {:4.1f}, "\
+                    .format(num_eps, avr_q, avr_ep_reward)
+                    +"max_ep_r: {:4.1f}, epsilon: {:4.3f}"\
+                    .format(max_ep_reward, agent.epsilon))
 
-    # Continue until end of episode
-    step = training_iters
-    while not terminal:
-        # Act, and add
-        action, value = agent.GetAction()
-        state, reward, terminal, info = env.step(action)
-        agent.Update(action, reward, state, terminal)
-        if args.render:
-            env.render()
-        step += 1
+        # Continue until end of episode
+        step = training_iters
+        while not terminal:
+            # Act, and add
+            action, value = agent.GetAction()
+            state, reward, terminal, info = env.step(action)
+            agent.Update(action, reward, state, terminal)
+            if args.render:
+                env.render()
+            step += 1
 
-    # Final test
-    R_s = run_tests(agent, env, test_count, args.render)
-    test_results.append({ 'step': step,
-              'scores': R_s,
-              'average': np.mean(R_s),
-              'max': np.max(R_s) })
-    summary = { 'params': vars(args), 'tests': test_results }
-    if args.save_file is not None:
-        np.save(args.save_file, summary)
+        # Final test
+        R_s = run_tests(agent, env, test_count, args.render)
+        test_results.append({ 'step': step,
+                'scores': R_s,
+                'average': np.mean(R_s),
+                'max': np.max(R_s) })
+        summary = { 'params': vars(args), 'tests': test_results }
+        if args.save_file is not None:
+            np.save(args.save_file, summary)
 
-    if args.chk_file is not None:
-        agent.Save(args.chk_file)
+        if args.chk_file is not None:
+            agent.Save(args.chk_file)
 
 
 def test_agent(agent, env, render=True):
@@ -229,8 +242,10 @@ def run_tests(agent, env, test_count=50, render=True):
     return R_s
 
 def run_experiments(agent_types, games):
-    model_names = { 'image' : 'image', 'objects': 'object', 'features': 'vanilla' }
-    suffixes = { 'image' : '', 'objects': '_objects', 'features': '_features' }
+    # To choose mode
+    model_names = { 'image' : 'image', 'objects': 'object', 'features': 'vanilla', 'modelbased': 'modelbased' }
+    # To decide how to represent the states
+    suffixes = { 'image' : '', 'objects': '_objects', 'features': '_features', 'modelbased': '_objects' }
 
     results_dir = 'results'
     try:
@@ -329,9 +344,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('game', type=str)
     args = parser.parse_args()
-    agent_types = ['image', 'objects', 'features']
+    # agent_types = ['image', 'objects', 'features']
     # games = ['aliens', 'boulderdash', 'missilecommand', 'survivezombies', 'zelda', 'pacman']
-
+    agent_types = ['modelbased']
     # run_experiments(agent_types, games)
     
     run_experiments(agent_types, [args.game])
