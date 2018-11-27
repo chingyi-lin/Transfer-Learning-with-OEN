@@ -247,9 +247,11 @@ def run_experiments(agent_types, games):
         training_iters=2000000
         display_step=25000
         test_step=50000
-        test_count=50
+        # Changed from 50 to 10
+        test_count=10
         
-        learning_rate=0.00001
+        # Changed from 0.00001 to 0.0001
+        learning_rate=0.0001
         batch_size=32
         replay_memory_size=50000
         learn_step=4
