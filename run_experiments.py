@@ -56,6 +56,7 @@ def run_agent(args):
     # Autodetect mode
     if mode is None:
         shape = env.observation_space.shape
+        print("Observation Space Shape : ", shape)
         if len(shape) is 3:
             mode = 'DQN'
         elif shape[0] is None:
@@ -64,6 +65,7 @@ def run_agent(args):
             mode = 'vanilla'
 
     # Set agent variables and wrap env based on chosen mode
+    print("Mode :", mode)
     if mode=='DQN':
         args.model = 'CNN'
         args.preprocessor = 'deepmind'
@@ -266,7 +268,7 @@ def run_experiments(agent_types, games):
         
         chk_file=None
         objdetect=0
-        render=1
+        render=0
         
     # Learning rate 0.01, 0.003, 0.001, 0.0003
     # layer sizes 32, 64, 128, 256
@@ -303,6 +305,8 @@ def run_experiments(agent_types, games):
         args.out_layers = [layer_size]*num_out_layers
  
         args.save_file = os.path.join(results_dir, g + '_' + a + '_' + str(args.seed))
+        args.chk_file = os.path.join(results_dir, g + '_' + a + '_' + str(args.seed))
+        os.mkdir(args.chk_file)
         args.env = 'vgdl_' + g + suffixes[a] + '-v0'
         args.model = model_names[a]
         
@@ -329,7 +333,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('game', type=str)
     args = parser.parse_args()
-    agent_types = ['image', 'objects', 'features']
+    #agent_types = ['image', 'objects', 'features']
+    agent_types = ['objects']
     # games = ['aliens', 'boulderdash', 'missilecommand', 'survivezombies', 'zelda', 'pacman']
 
     # run_experiments(agent_types, games)
