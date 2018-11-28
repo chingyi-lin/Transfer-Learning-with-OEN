@@ -31,6 +31,8 @@ class ModelBasedAgent(object):
         self.name = "ModelBasedAgent"
 
         # Environment details
+        self.env = env
+        self.render = args.render
         self.obs_size = args.obs_size
         self.n_actions = args.num_actions
         # TODO: CY's question - what is viewer?
@@ -46,19 +48,29 @@ class ModelBasedAgent(object):
         self._training_epochs = training_epochs
         self._training_batch_size = training_batch_size
 
+        from networks import object_embedding_network2
+        self.model = object_embedding_network2
+
+        def wrap_env(env, wrappers):
+            for wrapper in wrappers:
+                env = wrapper(env)
+            return env
+        
+        wrapped_env = lambda: wrap_env(env_cons(), wrappers)
+
         print('Gathering random dataset')
-        self._random_dataset = self._gather_rollouts(utils.RandomPolicy(env), num_init_random_rollouts)
+        self._random_dataset = self._gather_rollouts(utils.RandomPolicy(self.n_actions, self.env), num_init_random_rollouts)
         
         print('Creating policy')
-        self._policy = ModelBasedPolicy(env,
+        self._policy = ModelBasedPolicy(self.env,
                                         self._random_dataset,
                                         horizon=mpc_horizon,
                                         num_random_action_selection=num_random_action_selection)
 
     def Reset(self):
         # reinitiate graphs and reconstruct a random rollouts?
-        self._random_dataset = self._gather_rollouts(utils.RandomPolicy(env), num_init_random_rollouts)
-        self._policy = ModelBasedPolicy(env,
+        self._random_dataset = self._gather_rollouts(utils.RandomPolicy(self.n_actions, self.env), num_init_random_rollouts)
+        self._policy = ModelBasedPolicy(self.env,
                                         self._random_dataset,
                                         horizon=mpc_horizon,
                                         num_random_action_selection=num_random_action_selection)
@@ -76,6 +88,8 @@ class ModelBasedAgent(object):
         # TODO: need to initialise network
     
     def MBRLTraining(self):
+        state = env.reset()
+        rewards = []
         for itr in range(self._num_onpolicy_iters + 1):
             print('Iteration {0}'.format(itr))
             
@@ -99,16 +113,15 @@ class ModelBasedAgent(object):
 
     def _gather_rollouts(self, policy, num_rollouts):
         dataset = utils.Dataset()
-
         for _ in range(num_rollouts):
-            state = env.reset()
+            state = self.env.reset()
             done = False
             t = 0
             while not done:
-                if args.render:
-                    env.render()
+                if self.render:
+                    self.env.render()
                 action = policy.get_action(state)
-                next_state, reward, done, _ = env.step(action)
+                next_state, reward, done, _ = self.env.step(action)
                 done = done or (t >= self._max_rollout_length)
                 dataset.add(state, action, next_state, reward, done)
 

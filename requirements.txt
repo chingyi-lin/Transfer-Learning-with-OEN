@@ -5,4 +5,4 @@ scikit-learn
 tensorflow
 tqdm
 -e git+https://github.com/EndingCredits/gym-utils.git#egg=gym_utils
--e git+https://github.com/chingyi-lin/gym_vgdl.git
+-e git+https://github.com/chingyi-lin/gym_vgdl.git#egg=gym_vgdl

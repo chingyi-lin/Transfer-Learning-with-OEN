@@ -60,11 +60,11 @@ class Dataset(object):
         """
         Add (s, a, r, s') to this dataset
         """
-        if not self.is_empty:
-            # ensure the state, action, next_state are of the same dimension
-            assert len(self._states[-1]) == len(np.ravel(state))
-            assert len(self._actions[-1]) == len(np.ravel(action))
-            assert len(self._next_states[-1]) == len(np.ravel(next_state))
+        # if not self.is_empty:
+        #     # ensure the state, action, next_state are of the same dimension
+        #     assert len(self._states[-1]) == len(np.ravel(state))
+        #     assert len(self._actions[-1]) == len(np.ravel(action))
+        #     assert len(self._next_states[-1]) == len(np.ravel(next_state))
 
         self._states.append(np.ravel(state))
         self._actions.append(np.ravel(action))
@@ -76,11 +76,11 @@ class Dataset(object):
         """
         Append other_dataset to this dataset
         """
-        if not self.is_empty and not other_dataset.is_empty:
-            # ensure the state, action, next_state are of the same dimension
-            assert len(self._states[-1]) == len(other_dataset._states[-1])
-            assert len(self._actions[-1]) == len(other_dataset._actions[-1])
-            assert len(self._next_states[-1]) == len(other_dataset._next_states[-1])
+        # if not self.is_empty and not other_dataset.is_empty:
+        #     # ensure the state, action, next_state are of the same dimension
+        #     assert len(self._states[-1]) == len(other_dataset._states[-1])
+        #     assert len(self._actions[-1]) == len(other_dataset._actions[-1])
+        #     assert len(self._next_states[-1]) == len(other_dataset._next_states[-1])
 
         self._states += other_dataset._states
         self._actions += other_dataset._actions
@@ -183,10 +183,12 @@ def unnormalize(x, mean, std):
 
 class RandomPolicy(object):
 
-    def __init__(self, env):
-        self._action_space_low = env.action_space.low
-        self._action_space_high = env.action_space.high
+    def __init__(self, n_actions, env):
+        # self._action_space_low = env.action_space.low
+        self._action_space_low = 0
+        # self._action_space_high = env.action_space.high
+        self._action_space_high = n_actions
 
     def get_action(self, state):
-        return np.random.uniform(self._action_space_low, self._action_space_high)
+        return np.random.randint(self._action_space_low, self._action_space_high)
 

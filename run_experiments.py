@@ -285,7 +285,7 @@ def run_experiments(agent_types, games):
         
         chk_file=None
         objdetect=0
-        render=0
+        render=1
         
     # Learning rate 0.01, 0.003, 0.001, 0.0003
     # layer sizes 32, 64, 128, 256

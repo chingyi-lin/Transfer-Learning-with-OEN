@@ -15,8 +15,10 @@ class ModelBasedPolicy(object):
         self._cost_fn = env.cost_fn
         self._state_dim = env.observation_space.shape[0]
         self._action_dim = env.action_space.shape[0]
-        self._action_space_low = env.action_space.low
-        self._action_space_high = env.action_space.high
+        # self._action_space_low = env.action_space.low
+        self._action_space_low = 0
+        # self._action_space_high = env.action_space.high
+        self._action_space_high = self.n_actions
         self._init_dataset = init_dataset
         self._horizon = horizon
         self._num_random_action_selection = num_random_action_selection
@@ -43,7 +45,7 @@ class ModelBasedPolicy(object):
         ### YOUR CODE HERE
         # raise NotImplementedError
         state_ph = tf.placeholder(tf.float32, [None, self._state_dim])
-        action_ph = tf.placeholder(tf.float32, [None, self._action_dim])
+        action_ph = tf.placeholder(tf.int64, [None, self._action_dim])
         next_state_ph = tf.placeholder(tf.float32, [None, self._state_dim])
 
         return state_ph, action_ph, next_state_ph
@@ -160,7 +162,7 @@ class ModelBasedPolicy(object):
             shape=[self._num_random_action_selection, self._horizon, self._action_dim],
             minval=self._action_space_low,
             maxval=self._action_space_high,
-            dtype=tf.float32,
+            dtype=tf.int64,
             seed=None # default
         )
         
@@ -192,15 +194,16 @@ class ModelBasedPolicy(object):
         ### YOUR CODE HERE
         # raise NotImplementedError
         state_ph, action_ph, next_state_ph = self._setup_placeholders()
-        next_state_pred = self._dynamics_func(state_ph, action_ph, reuse=False)
-        loss, optimizer = self._setup_training(state_ph, next_state_ph, next_state_pred)
+        state_emb_ph = self.model(self.state_ph)
+        next_state_pred = self._dynamics_func(state_emb_ph, action_ph, reuse=False)
+        loss, optimizer = self._setup_training(state_emb_ph, next_state_ph, next_state_pred)
         ### PROBLEM 2
         ### YOUR CODE HERE
-        best_action = self._setup_action_selection(state_ph)
+        best_action = self._setup_action_selection(state_emb_ph)
 
         sess.run(tf.global_variables_initializer())
 
-        return sess, state_ph, action_ph, next_state_ph, \
+        return sess, state_emb_ph, action_ph, next_state_ph, \
                 next_state_pred, loss, optimizer, best_action
 
     def train_step(self, states, actions, next_states):
