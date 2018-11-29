@@ -213,7 +213,7 @@ class DQNAgent(RolloutActor):
 
         # Saver
         self.model_weights = self.pred_weights
-        self.saver = tf.train.Saver(self.model_weights)
+        self.saver = tf.train.Saver(self.model_weights[2:])
         
         # Summaries
         self.train_summaries = tf.summary.merge(train_summaries)
@@ -319,9 +319,11 @@ class DQNAgent(RolloutActor):
 
     def Load(self, save_dir):
         # Load model from file
-        ckpt = tf.train.get_checkpoint_state(save_dir)
-        print("Loading model from {}".format(ckpt.model_checkpoint_path))
-        self.saver.restore(self.session, ckpt.model_checkpoint_path)
+        #ckpt = tf.train.get_checkpoint_state(save_dir)
+        #print("Loading model from {}".format(ckpt.model_checkpoint_path))
+        #self.saver.restore(self.session, ckpt.model_checkpoint_path)
+        print("Loading from path : ", save_dir)
+        self.saver.restore(self.session, tf.train.latest_checkpoint(save_dir))
 
         # Also need to initialise target network
         self.session.run(self.targ_update_op)

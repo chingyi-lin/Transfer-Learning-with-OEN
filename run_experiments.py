@@ -107,9 +107,9 @@ def run_agent(args):
     # Create agent
     agent = DQNAgent.DQNAgent(sess, args)
 
+    agent.Load('./results/ptsp_objects_123/')
     # Initialize all tensorflow variables
     sess.run(tf.global_variables_initializer())
-
 
     # Start Agent
     state = env.reset()
